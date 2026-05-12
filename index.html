@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作品入口導覽</title>
+    <!-- 使用 Google Fonts 提升排版質感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-gradient: linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%);
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 450px;
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        p.subtitle {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 35px;
+        }
+
+        .button-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 18px 24px;
+            border-radius: 16px;
+            color: var(--text-main);
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
+            transform: scale(1.03);
+            background: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 8px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .nav-link:active {
+            transform: scale(0.98);
+        }
+
+        .icon-box {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .arrow {
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        .nav-link:hover .arrow {
+            opacity: 1;
+        }
+
+        footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: var(--text-sub);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>專案成果展示</h1>
+        <p class="subtitle">數位影像與網頁開發實作</p>
+        
+        <div class="button-list">
+            <!-- 2048 遊戲連結 -->
+            <a href="2048.html" class="nav-link">
+                <span><span class="icon-box">🎮</span> 2048 遊戲實作</span>
+                <span class="arrow">➔</span>
+            </a>
+            
+            <!-- AI 工作坊連結 -->
+            <a href="一恭32 AI 數位影像工作坊.html" class="nav-link">
+                <span><span class="icon-box">🎨</span> AI 數位影像工作坊</span>
+                <span class="arrow">➔</span>
+            </a>
+            
+            <!-- Gemini 實作上傳區連結 -->
+            <a href="一恭32劉冠貽__Gemini + 網頁API實作上傳區.html" class="nav-link">
+                <span><span class="icon-box">🚀</span> Gemini API 實作區</span>
+                <span class="arrow">➔</span>
+            </a>
+        </div>
+
+        <footer>
+            &copy; 2024 一恭32 劉冠貽 作品集
+        </footer>
+    </div>
+
+    <script>
+        // 加入簡單的頁面載入特效
+        window.onload = () => {
+            console.log("導覽頁面已就緒");
+            
+            // 點擊按鈕時觸發微震動效果 (針對行動裝置)
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.navigator.vibrate) {
+                        window.navigator.vibrate(20);
+                    }
+                });
+            });
+        };
+    </script>
+</body>
+</html>
