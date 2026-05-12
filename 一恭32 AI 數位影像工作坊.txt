@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamy Stardust Studio - 旗艦完整版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500;700&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-pink: #ffafbd;
+            --accent-purple: #c471ed;
+        }
+
+        body {
+            background: linear-gradient(-45deg, #ffafbd, #ffc3a0, #2193b0, #6dd5ed);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+            font-family: 'Quicksand', 'Microsoft JhengHei', sans-serif;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            color: #4a4a4a;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar {
+            width: 420px;
+            margin: 1rem;
+            border-radius: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            z-index: 50;
+            overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 0px; }
+
+        .main-stage {
+            flex-grow: 1;
+            margin: 1rem 1rem 1rem 0;
+            border-radius: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .magic-btn {
+            background: white;
+            border-radius: 1rem;
+            padding: 0.6rem;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            text-align: center;
+            border: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+        .magic-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(196, 113, 237, 0.15);
+        }
+        .magic-btn.active {
+            background: linear-gradient(135deg, #c471ed, #f64f59);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* 棋盤格背景（去背預覽用） */
+        .checkerboard {
+            background-image: linear-gradient(45deg, #ddd 25%, transparent 25%), 
+                              linear-gradient(-45deg, #ddd 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #ddd 75%), 
+                              linear-gradient(-45deg, transparent 75%, #ddd 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            background-color: white;
+        }
+
+        /* --- 框架樣式 --- */
+        #canvasWrapper {
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .frame-polaroid { background: white !important; padding: 15px 15px 60px 15px !important; box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important; }
+        .frame-dreamy { padding: 20px !important; background: linear-gradient(45deg, #ffafbd, #ffc3a0) !important; border-radius: 40px !important; box-shadow: 0 0 30px rgba(255, 175, 189, 0.5) !important; }
+        .frame-classic { padding: 25px !important; background: #4a3728 !important; border: 8px double #d4af37 !important; box-shadow: inset 0 0 15px rgba(0,0,0,0.5) !important; }
+        .frame-film { padding: 40px 15px !important; background: #111 !important; border-left: 15px dashed #444 !important; border-right: 15px dashed #444 !important; }
+
+        #imageCanvas { max-width: 100%; max-height: 75vh; display: block; cursor: crosshair; }
+
+        .sparkle-star {
+            position: absolute;
+            pointer-events: none;
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255,255,255,0.8);
+            animation: flyStar 0.8s ease-out forwards;
+            z-index: 100;
+        }
+        @keyframes flyStar {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.2); opacity: 0; }
+        }
+
+        .ai-loading { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { height: 4px; background: #e5e7eb; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #c471ed; cursor: pointer; margin-top: -6px; border: 2px solid white; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar glass-panel">
+        <header class="text-center mb-4">
+            <h1 class="text-4xl font-bold italic" style="font-family: 'Zhi Mang Xing', cursive; color: #c471ed;">Dreamy Stardust</h1>
+            <p class="text-[10px] tracking-widest text-gray-400">AI 智慧影像旗艦實驗室</p>
+        </header>
+
+        <!-- 照片上傳 -->
+        <div class="mb-4">
+            <input type="file" id="fileInput" class="hidden" accept="image/*">
+            <button onclick="document.getElementById('fileInput').click()" class="w-full py-4 bg-white text-purple-600 font-bold rounded-3xl shadow-sm hover:shadow-lg transition flex items-center justify-center gap-2">
+                <span>📸</span> 選擇一張精美照片
+            </button>
+        </div>
+
+        <!-- AI 助理功能 -->
+        <div class="mb-4 space-y-2">
+            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1">AI 助理與去背</h3>
+            <button id="btnAiRemoveBg" class="w-full py-3 bg-purple-600 text-white font-bold rounded-2xl shadow-md hover:bg-purple-700 transition flex items-center justify-center gap-2">
+                ✨ AI 一鍵自動去背景
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="btnAiSuggest" class="py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl border border-indigo-100 text-xs transition">✨ AI 建議濾鏡</button>
+                <button id="btnAiCaption" class="py-2 bg-pink-50 text-pink-600 font-bold rounded-xl border border-pink-100 text-xs transition">✨ AI 生成文案</button>
+            </div>
+        </div>
+
+        <!-- 氛圍濾鏡選單 (加回) -->
+        <div class="mb-4">
+            <h3 class="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">藝術氛圍濾鏡</h3>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="magic-btn filter-item active" data-filter="none">原始色調</div>
+                <div class="magic-btn filter-item" data-filter="peach">蜜桃粉嫩</div>
+                <div class="magic-btn filter-item" data-filter="mist">柔霧森林</div>
+                <div class="magic-btn filter-item" data-filter="ocean">清涼蘇打</div>
+                <div class="magic-btn filter-item" data-filter="noir">優雅黑白</div>
+                <div class="magic-btn filter-item" data-filter="golden">金秋暖陽</div>
+            </div>
+        </div>
+
+        <!-- 進階調色 -->
+        <div class="mb-4 p-4 bg-white/50 rounded-2xl border border-white space-y-3">
+            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">進階影像調色</h3>
+            
+            <div class="space-y-1">
+                <div class="flex justify-between text-[11px] font-bold text-gray-500"><span>曝光亮度</span><span id="valBright">100%</span></div>
+                <input type="range" id="adjBright" min="50" max="150" value="100" class="w-full">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-[11px] font-bold text-gray-500"><span>色彩對比度</span><span id="valContrast">100%</span></div>
+                <input type="range" id="adjContrast" min="50" max="150" value="100" class="w-full">
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-[11px] font-bold text-gray-500"><span>色彩飽和度</span><span id="valSaturate">100%</span></div>
+                <input type="range" id="adjSaturate" min="0" max="200" value="100" class="w-full">
+            </div>
+        </div>
+
+        <!-- 魔法工具與框架 -->
+        <div class="mb-4 grid grid-cols-1 gap-2">
+            <button class="magic-btn w-full py-3 bg-purple-50 text-purple-600 border border-purple-100" id="toolBrush">🪄 開啟仙女棒星塵筆刷</button>
+            
+            <div class="p-3 bg-white/40 rounded-2xl border border-white">
+                <h3 class="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">創意藝術框架</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="magic-btn frame-btn active" data-frame="none">不套用相框</button>
+                    <button class="magic-btn frame-btn" data-frame="polaroid">拍立得框</button>
+                    <button class="magic-btn frame-btn" data-frame="dreamy">夢幻圓框</button>
+                    <button class="magic-btn frame-btn" data-frame="classic">藝術畫框</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 儲存 -->
+        <button id="btnSave" class="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-3xl shadow-xl hover:scale-[1.02] transition-all">儲存我的美好作品</button>
+    </aside>
+
+    <main class="main-stage">
+        <!-- AI 文案 -->
+        <div id="aiCaptionBox" class="absolute top-10 mx-auto max-w-sm glass-panel p-6 rounded-[2rem] hidden z-30 shadow-2xl border-white/80">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs text-pink-500 font-bold">✨ AI 夢幻靈感文案</p>
+                <button onclick="document.getElementById('aiCaptionBox').classList.add('hidden')" class="text-gray-300 hover:text-gray-500 transition">✕</button>
+            </div>
+            <p id="aiCaptionText" class="text-sm text-gray-600 leading-relaxed font-medium"></p>
+        </div>
+
+        <div id="canvasWrapper" class="rounded-xl overflow-hidden">
+            <canvas id="imageCanvas"></canvas>
+            <div id="emptyState" class="text-center absolute">
+                <div class="text-7xl mb-6">🦄</div>
+                <h2 class="text-2xl font-bold text-white tracking-widest">請先上傳照片開始創作</h2>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const apiKey = "";
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const fileInput = document.getElementById('fileInput');
+        const wrapper = document.getElementById('canvasWrapper');
+
+        let appState = {
+            currentImg: null,
+            filter: 'none',
+            brightness: 1.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            isBrushActive: false,
+            sparkles: []
+        };
+
+        function render() {
+            if (!appState.currentImg) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 基礎調色
+            ctx.filter = `brightness(${appState.brightness}) contrast(${appState.contrast}) saturate(${appState.saturation})`;
+            ctx.drawImage(appState.currentImg, 0, 0, canvas.width, canvas.height);
+            ctx.filter = 'none';
+
+            // 套用藝術氛圍濾鏡 (ImageData 處理，確保與調色疊加)
+            if (appState.filter !== 'none') {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const d = imgData.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    if (appState.filter === 'peach') { d[i] += 25; d[i+1] += 5; }
+                    else if (appState.filter === 'mist') { d[i] += 15; d[i+2] += 25; }
+                    else if (appState.filter === 'ocean') { d[i] *= 0.85; d[i+2] += 35; }
+                    else if (appState.filter === 'noir') {
+                        const g = d[i]*0.3 + d[i+1]*0.59 + d[i+2]*0.11;
+                        d[i] = d[i+1] = d[i+2] = g;
+                    } else if (appState.filter === 'golden') {
+                        d[i] += 35; d[i+1] += 20; d[i+2] -= 10;
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+
+            // 星塵繪製
+            appState.sparkles.forEach(p => {
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.s);
+                grad.addColorStop(0, 'rgba(255,255,255,1)');
+                grad.addColorStop(0.5, 'rgba(255,255,255,0.4)');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+            });
+        }
+
+        // --- 檔案上傳 ---
+        fileInput.onchange = e => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const img = new Image();
+                img.onload = () => {
+                    appState.currentImg = img;
+                    document.getElementById('emptyState').style.display = 'none';
+                    canvas.classList.remove('checkerboard');
+                    setupCanvas();
+                    render();
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        function setupCanvas() {
+            const img = appState.currentImg;
+            const ratio = Math.min((window.innerWidth - 650) / img.width, (window.innerHeight - 250) / img.height, 1);
+            canvas.width = img.width * ratio;
+            canvas.height = img.height * ratio;
+        }
+
+        // --- 濾鏡功能 ---
+        document.querySelectorAll('.filter-item').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.filter-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                appState.filter = btn.dataset.filter;
+                render();
+            };
+        });
+
+        // --- 調色控制 ---
+        document.getElementById('adjBright').oninput = e => {
+            appState.brightness = e.target.value / 100;
+            document.getElementById('valBright').innerText = e.target.value + '%';
+            render();
+        };
+        document.getElementById('adjContrast').oninput = e => {
+            appState.contrast = e.target.value / 100;
+            document.getElementById('valContrast').innerText = e.target.value + '%';
+            render();
+        };
+        document.getElementById('adjSaturate').oninput = e => {
+            appState.saturation = e.target.value / 100;
+            document.getElementById('valSaturate').innerText = e.target.value + '%';
+            render();
+        };
+
+        // --- AI 去背功能 ---
+        document.getElementById('btnAiRemoveBg').onclick = async () => {
+            if (!appState.currentImg) return;
+            const btn = document.getElementById('btnAiRemoveBg');
+            btn.classList.add('ai-loading');
+            btn.innerText = "✨ AI 去背處理中...";
+
+            const base64 = canvas.toDataURL('image/png').split(',')[1];
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: "Remove the background of this image. Keep the main subject and make everything else transparent." },
+                        { inlineData: { mimeType: "image/png", data: base64 } }
+                    ]
+                }],
+                generationConfig: { responseModalities: ["IMAGE"] }
+            };
+
+            try {
+                const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await res.json();
+                const newBase = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                if (newBase) {
+                    const newImg = new Image();
+                    newImg.onload = () => {
+                        appState.currentImg = newImg;
+                        canvas.classList.add('checkerboard');
+                        render();
+                    };
+                    newImg.src = `data:image/png;base64,${newBase}`;
+                }
+            } catch (e) { alert("AI 去背目前連線繁忙，請稍後再試。"); }
+
+            btn.classList.remove('ai-loading');
+            btn.innerText = "✨ AI 一鍵自動去背景";
+        };
+
+        // --- AI 文字功能 ---
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const base64 = canvas.toDataURL('image/png').split(',')[1];
+            const payload = { contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: base64 } }] }] };
+            const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+            return await res.json();
+        }
+
+        document.getElementById('btnAiSuggest').onclick = async () => {
+            if (!appState.currentImg) return;
+            const btn = document.getElementById('btnAiSuggest');
+            btn.classList.add('ai-loading');
+            const result = await callGemini("這張照片適合什麼濾鏡與調色參數？請簡短說明理由。");
+            if (result) alert(`✨ AI 專家建議：\n${result.candidates[0].content.parts[0].text}`);
+            btn.classList.remove('ai-loading');
+        };
+
+        document.getElementById('btnAiCaption').onclick = async () => {
+            if (!appState.currentImg) return;
+            const btn = document.getElementById('btnAiCaption');
+            btn.classList.add('ai-loading');
+            const result = await callGemini("請為這張照片寫一段充滿少女心、優雅的 IG 文案，包含繁體中文標籤。");
+            if (result) {
+                document.getElementById('aiCaptionText').innerText = result.candidates[0].content.parts[0].text;
+                document.getElementById('aiCaptionBox').classList.remove('hidden');
+            }
+            btn.classList.remove('ai-loading');
+        };
+
+        // --- 互動功能 ---
+        document.querySelectorAll('.frame-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.frame-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                wrapper.className = btn.dataset.frame !== 'none' ? 'frame-' + btn.dataset.frame : '';
+            };
+        });
+
+        document.getElementById('toolBrush').onclick = () => {
+            appState.isBrushActive = !appState.isBrushActive;
+            document.getElementById('toolBrush').classList.toggle('active');
+            document.getElementById('toolBrush').innerText = appState.isBrushActive ? "🪄 星塵魔法施展中..." : "🪄 開啟仙女棒星塵筆刷";
+        };
+
+        canvas.onmousemove = e => {
+            if (!appState.isBrushActive || !appState.currentImg) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            if (Math.random() > 0.6) {
+                appState.sparkles.push({ x, y, s: Math.random() * 8 + 3 });
+                render();
+            }
+        };
+
+        document.getElementById('btnSave').onclick = () => {
+            if (!appState.currentImg) return;
+            const link = document.createElement('a');
+            link.download = 'stardust-ultimate.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+    </script>
+</body>
+</html>

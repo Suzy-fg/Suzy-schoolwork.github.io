@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 夢幻煙火最高方塊版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #fff5f8;
+            color: #8d6e63;
+            overflow-x: hidden;
+            touch-action: none;
+        }
+
+        .game-container {
+            position: relative;
+            width: min(95vw, 500px);
+            aspect-ratio: 1 / 1;
+            background-color: #fce4ec;
+            border-radius: 16px;
+            padding: 12px;
+            box-sizing: border-box;
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(240, 98, 146, 0.25);
+        }
+
+        /* AI 指引羅盤 */
+        .ai-compass {
+            position: absolute;
+            top: -25px;
+            right: 0px;
+            background: white;
+            padding: 12px;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(240, 98, 146, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1100;
+            border: 2px solid #f8bbd0;
+            min-width: 90px;
+        }
+
+        .compass-arrow {
+            font-size: 28px;
+            color: #f06292;
+            line-height: 1;
+        }
+
+        .arrow-active {
+            animation: bounce-arrow 0.6s infinite alternate;
+        }
+
+        @keyframes bounce-arrow {
+            from { transform: translateY(0) scale(1.1); }
+            to { transform: translateY(-6px) scale(1.3); }
+        }
+
+        #fxCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        canvas#gameCanvas { display: block; width: 100%; height: 100%; }
+
+        /* 分數與最高方塊框 */
+        .stat-box {
+            background: #f8bbd0;
+            padding: 8px 16px;
+            border-radius: 12px;
+            color: #ad1457;
+            text-align: center;
+            min-width: 100px;
+            box-shadow: 0 4px 0 #f48fb1;
+            transition: all 0.3s;
+        }
+
+        .stat-label { font-size: 10px; font-weight: bold; color: #ec407a; display: block; letter-spacing: 0.5px; }
+        .stat-value { font-size: 20px; font-weight: bold; display: block; }
+
+        .max-tile-box {
+            background: #ba68c8;
+            color: white;
+            box-shadow: 0 4px 0 #7b1fa2;
+        }
+        .max-tile-box .stat-label { color: #f3e5f5; }
+
+        .game-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 245, 248, 0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; border-radius: 16px; display: none; backdrop-filter: blur(6px);
+        }
+
+        .btn-action {
+            background-color: #f06292;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 0 #c2185b;
+        }
+        .btn-action:hover { transform: scale(1.05); }
+
+        /* 慶祝閃爍 */
+        @keyframes flash-bg {
+            0% { background-color: #fff5f8; }
+            50% { background-color: #fce4ec; }
+            100% { background-color: #fff5f8; }
+        }
+        .celebrating { animation: flash-bg 0.4s 4; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen py-8 px-4" id="main-body">
+
+    <div class="flex flex-col md:flex-row justify-between w-full max-w-[600px] mb-10 items-center gap-6">
+        <div class="text-center md:text-left">
+            <h1 class="text-6xl font-bold text-[#f06292]" style="text-shadow: 3px 3px 0px #fce4ec;">2048</h1>
+            <p class="text-pink-400 font-medium italic">夢幻馬卡龍慶典 ✨</p>
+        </div>
+        
+        <div class="flex flex-wrap justify-center gap-3">
+            <div class="stat-box">
+                <span class="stat-label">SCORE</span>
+                <span id="current-score" class="stat-value">0</span>
+            </div>
+            <div id="max-tile-box" class="stat-box max-tile-box">
+                <span class="stat-label">MAX TILE</span>
+                <span id="max-tile" class="stat-value">2</span>
+            </div>
+            <button onclick="resetGame()" class="bg-white text-pink-400 p-4 rounded-2xl shadow-md border-2 border-pink-100 hover:bg-pink-50 transition-all active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <!-- 右上角指引 -->
+        <div class="ai-compass" id="ai-compass">
+            <div class="text-[10px] font-bold text-pink-400 uppercase tracking-tighter">魔法建議</div>
+            <div id="compass-arrow" class="compass-arrow">🔮</div>
+            <div id="compass-text" class="text-[10px] font-bold text-pink-300">感應中</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        <canvas id="fxCanvas"></canvas>
+        
+        <div id="game-over" class="game-overlay">
+            <h2 class="text-4xl font-bold mb-4 text-[#ad1457]">體力耗盡了 🧸</h2>
+            <p id="over-max-tile" class="text-pink-500 font-bold mb-8"></p>
+            <button onclick="resetGame()" class="btn-action text-lg px-8 py-3">重新啟程</button>
+        </div>
+        
+        <div id="game-win" class="game-overlay">
+            <h2 class="text-5xl font-bold mb-4 text-[#f06292]">💖 完美 2048！</h2>
+            <p class="text-pink-400 mb-8 italic">你完成了終極夢想</p>
+            <button onclick="continueGame()" class="btn-action text-lg px-8 py-3">突破天際</button>
+        </div>
+    </div>
+
+    <div class="mt-8 w-full max-w-[500px]">
+        <div id="ai-suggestion" class="text-sm text-pink-400 italic text-center px-4 leading-relaxed bg-white/50 py-3 rounded-2xl border border-pink-50">
+            合併出 128 時會有小煙火，2048 則是盛大慶典喔！
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+        const canvas = document.getElementById('gameCanvas');
+        const fxCanvas = document.getElementById('fxCanvas');
+        const ctx = canvas.getContext('2d');
+        const fxCtx = fxCanvas.getContext('2d');
+        const mainBody = document.getElementById('main-body');
+        
+        const currentScoreEl = document.getElementById('current-score');
+        const maxTileEl = document.getElementById('max-tile');
+        const compassArrow = document.getElementById('compass-arrow');
+        const compassText = document.getElementById('compass-text');
+        const aiSuggestionEl = document.getElementById('ai-suggestion');
+
+        const GRID_SIZE = 4;
+        const CELL_GAP = 12;
+        const ANIMATION_SPEED = 0.6; 
+
+        let grid = [];
+        let score = 0;
+        let currentMaxTile = 2;
+        let allTimeMaxTile = parseInt(localStorage.getItem('2048_dream_maxtile')) || 2;
+        
+        let isMoving = false;
+        let hasWon = false;
+        let keepPlaying = false;
+        let aiThinking = false;
+
+        const COLORS = {
+            background: '#fce4ec',
+            empty: '#fff5f8',
+            2: { bg: '#fff9c4', text: '#fbc02d', size: '40px' },
+            4: { bg: '#e1f5fe', text: '#03a9f4', size: '40px' },
+            8: { bg: '#f3e5f5', text: '#ab47bc', size: '40px' },
+            16: { bg: '#e8f5e9', text: '#66bb6a', size: '40px' },
+            32: { bg: '#ffebee', text: '#ef5350', size: '40px' },
+            64: { bg: '#fff3e0', text: '#ffa726', size: '40px' },
+            128: { bg: '#fce4ec', text: '#ec407a', size: '32px' },
+            256: { bg: '#f8bbd0', text: '#d81b60', size: '32px' },
+            512: { bg: '#f48fb1', text: '#c2185b', size: '32px' },
+            1024: { bg: '#f06292', text: '#ffffff', size: '28px' },
+            2048: { bg: '#ec407a', text: '#ffffff', size: '28px' },
+            super: { bg: '#ad1457', text: '#ffffff', size: '24px' }
+        };
+
+        maxTileEl.innerText = allTimeMaxTile;
+
+        class Tile {
+            constructor(row, col, value) {
+                this.row = row; this.col = col; this.value = value;
+                this.x = col; this.y = row; this.scale = 0.1;
+            }
+        }
+
+        // ================= AI 指引 =================
+        const ARROWS = { 'UP': '↑', 'DOWN': '↓', 'LEFT': '←', 'RIGHT': '→' };
+
+        async function updateAIMagicCompass() {
+            if (aiThinking) return;
+            aiThinking = true;
+            compassText.innerText = "感應中";
+            try {
+                const board = grid.map(r => r.map(c => c ? c.value : 0));
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `2048 AI顧問。狀態：${JSON.stringify(board)}。回傳最好方向(UP, DOWN, LEFT, RIGHT)與一句短解釋。` }] }],
+                        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { direction: { type: "STRING" }, reason: { type: "STRING" } } } }
+                    })
+                });
+                const data = await res.json();
+                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                compassArrow.innerText = ARROWS[result.direction] || "🔮";
+                compassArrow.classList.add('arrow-active');
+                compassText.innerText = result.direction;
+                aiSuggestionEl.innerText = `💡 ${result.reason}`;
+            } catch (e) { compassText.innerText = "斷開連結"; }
+            finally { aiThinking = false; }
+        }
+
+        // ================= 煙火效果 =================
+        let particles = [];
+        class Particle {
+            constructor(x, y, color, speedScale = 1) {
+                this.x = x; this.y = y; this.color = color;
+                this.radius = Math.random() * 3 + 1;
+                this.velocity = { 
+                    x: (Math.random() - 0.5) * (12 * speedScale), 
+                    y: (Math.random() - 0.5) * (12 * speedScale) 
+                };
+                this.alpha = 1; this.friction = 0.95; this.gravity = 0.15;
+            }
+            draw() {
+                fxCtx.save(); fxCtx.globalAlpha = this.alpha;
+                fxCtx.beginPath(); fxCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                fxCtx.fillStyle = this.color;
+                fxCtx.shadowBlur = 15; fxCtx.shadowColor = this.color;
+                fxCtx.fill(); fxCtx.restore();
+            }
+            update() {
+                this.velocity.x *= this.friction; this.velocity.y *= this.friction;
+                this.velocity.y += this.gravity; this.x += this.velocity.x; this.y += this.velocity.y;
+                this.alpha -= 0.01;
+            }
+        }
+
+        function launchFireworks(type = 'small') {
+            const count = type === 'small' ? 4 : 20;
+            const burstSize = type === 'small' ? 35 : 70;
+            const speed = type === 'small' ? 1 : 2;
+            
+            if (type === 'large') mainBody.classList.add('celebrating');
+            setTimeout(() => mainBody.classList.remove('celebrating'), 2000);
+
+            let fired = 0;
+            const interval = setInterval(() => {
+                const x = Math.random() * (fxCanvas.width / window.devicePixelRatio);
+                const y = Math.random() * (fxCanvas.height / window.devicePixelRatio * 0.6);
+                const colors = ['#f06292', '#ba68c8', '#4dd0e1', '#fff176', '#ff80ab', '#ffffff'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                for (let i = 0; i < burstSize; i++) particles.push(new Particle(x, y, color, speed));
+                fired++; if (fired >= count) clearInterval(interval);
+            }, type === 'small' ? 250 : 150);
+        }
+
+        function fxLoop() {
+            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].alpha <= 0) particles.splice(i, 1);
+                else particles[i].draw();
+            }
+            requestAnimationFrame(fxLoop);
+        }
+
+        // ================= 遊戲核心 =================
+        function initGrid() {
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+            score = 0; currentMaxTile = 2;
+            updateUI();
+            addRandomTile(); addRandomTile();
+            render(); updateAIMagicCompass();
+        }
+
+        function addRandomTile() {
+            let empty = [];
+            for (let r = 0; r < GRID_SIZE; r++)
+                for (let c = 0; c < GRID_SIZE; c++) if (!grid[r][c]) empty.push({ r, c });
+            if (empty.length > 0) {
+                let { r, c } = empty[Math.floor(Math.random() * empty.length)];
+                grid[r][c] = new Tile(r, c, Math.random() < 0.9 ? 2 : 4);
+            }
+        }
+
+        function updateUI() {
+            currentScoreEl.innerText = score;
+            
+            // 尋找當前棋盤最高方塊
+            let boardMax = 2;
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (grid[r][c] && grid[r][c].value > boardMax) boardMax = grid[r][c].value;
+                }
+            }
+            currentMaxTile = boardMax;
+
+            // 檢查是否更新歷史紀錄
+            if (currentMaxTile > allTimeMaxTile) {
+                allTimeMaxTile = currentMaxTile;
+                localStorage.setItem('2048_dream_maxtile', allTimeMaxTile);
+                document.getElementById('max-tile-box').classList.add('scale-110');
+                setTimeout(() => document.getElementById('max-tile-box').classList.remove('scale-110'), 300);
+            }
+            maxTileEl.innerText = allTimeMaxTile;
+        }
+
+        function slide(dir) {
+            let moved = false;
+            const horiz = dir === 'left' || dir === 'right';
+            const rev = dir === 'right' || dir === 'down';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                let line = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const t = horiz ? grid[i][j] : grid[j][i];
+                    if (t) line.push(t);
+                }
+                if (rev) line.reverse();
+                for (let j = 0; j < line.length - 1; j++) {
+                    if (line[j].value === line[j+1].value) {
+                        line[j].value *= 2; score += line[j].value;
+                        
+                        // 煙火判斷
+                        if (line[j].value === 128) launchFireworks('small');
+                        if (line[j].value === 2048 && !hasWon) {
+                            launchFireworks('large');
+                            hasWon = true; 
+                            document.getElementById('game-win').style.display = 'flex';
+                        }
+                        
+                        line.splice(j + 1, 1); moved = true;
+                    }
+                }
+                const res = [...line, ...Array(GRID_SIZE - line.length).fill(null)];
+                if (rev) res.reverse();
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (horiz) { if (grid[i][j] !== res[j]) moved = true; grid[i][j] = res[j]; }
+                    else { if (grid[j][i] !== res[j]) moved = true; grid[j][i] = res[j]; }
+                }
+            }
+            return moved;
+        }
+
+        function render() {
+            if (!grid.length) return;
+            const dpr = window.devicePixelRatio || 1;
+            const size = canvas.width / dpr;
+            const cellSize = (size - (GRID_SIZE + 1) * CELL_GAP) / GRID_SIZE;
+            ctx.clearRect(0, 0, size, size);
+            ctx.fillStyle = COLORS.background;
+            ctx.beginPath(); ctx.roundRect(0, 0, size, size, 16); ctx.fill();
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    ctx.fillStyle = COLORS.empty;
+                    ctx.beginPath(); ctx.roundRect(CELL_GAP + c * (cellSize + CELL_GAP), CELL_GAP + r * (cellSize + CELL_GAP), cellSize, cellSize, 12); ctx.fill();
+                }
+            }
+            let moving = false;
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const t = grid[r][c];
+                    if (t) {
+                        if (Math.abs(t.x - c) > 0.01 || Math.abs(t.y - r) > 0.01) {
+                            t.x += (c - t.x) * ANIMATION_SPEED; t.y += (r - t.y) * ANIMATION_SPEED;
+                            moving = true;
+                        } else { t.x = c; t.y = r; }
+                        if (t.scale < 1) { t.scale += 0.2; moving = true; } else t.scale = 1;
+                        const x = CELL_GAP + t.x * (cellSize + CELL_GAP);
+                        const y = CELL_GAP + t.y * (cellSize + CELL_GAP);
+                        const cfg = COLORS[t.value] || COLORS.super;
+                        ctx.save();
+                        ctx.translate(x + cellSize/2, y + cellSize/2); ctx.scale(t.scale, t.scale); ctx.translate(-(x + cellSize/2), -(y + cellSize/2));
+                        ctx.fillStyle = cfg.bg; ctx.beginPath(); ctx.roundRect(x, y, cellSize, cellSize, 12); ctx.fill();
+                        ctx.fillStyle = cfg.text; ctx.font = `bold ${cfg.size} Quicksand`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillText(t.value, x + cellSize/2, y + cellSize/2 + 2); ctx.restore();
+                    }
+                }
+            }
+            if (moving) requestAnimationFrame(render);
+            else isMoving = false;
+        }
+
+        function handleInput(e) {
+            if (isMoving) return;
+            let m = false;
+            if (e.key === 'ArrowUp') m = slide('up');
+            else if (e.key === 'ArrowDown') m = slide('down');
+            else if (e.key === 'ArrowLeft') m = slide('left');
+            else if (e.key === 'ArrowRight') m = slide('right');
+            if (m) { 
+                addRandomTile(); updateUI(); isMoving = true; render(); 
+                if (checkGameOver()) {
+                    document.getElementById('over-max-tile').innerText = `本次最高方塊：${currentMaxTile}`;
+                    document.getElementById('game-over').style.display = 'flex';
+                }
+                updateAIMagicCompass();
+            }
+        }
+
+        function checkGameOver() {
+            for (let r = 0; r < GRID_SIZE; r++)
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (!grid[r][c]) return false;
+                    if (r < GRID_SIZE - 1 && grid[r+1][c] && grid[r+1][c].value === grid[r][c].value) return false;
+                    if (c < GRID_SIZE - 1 && grid[r][c+1] && grid[r][c+1].value === grid[r][c].value) return false;
+                }
+            return true;
+        }
+
+        function resizeCanvas() {
+            const size = canvas.parentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = fxCanvas.width = size * dpr;
+            canvas.height = fxCanvas.height = size * dpr;
+            ctx.resetTransform(); fxCtx.resetTransform();
+            ctx.scale(dpr, dpr); fxCtx.scale(dpr, dpr);
+            if (grid.length > 0) render();
+        }
+
+        function resetGame() {
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('game-win').style.display = 'none';
+            hasWon = false; keepPlaying = false; initGrid();
+        }
+
+        function continueGame() { document.getElementById('game-win').style.display = 'none'; keepPlaying = true; }
+
+        window.addEventListener('keydown', handleInput);
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = () => { initGrid(); resizeCanvas(); requestAnimationFrame(fxLoop); };
+    </script>
+</body>
+</html>
